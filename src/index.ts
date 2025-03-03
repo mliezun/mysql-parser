@@ -34,6 +34,8 @@ interface FindExpResult {
   nextIndex: number
 }
 
+export type SqlStatementResult = { stmt: string, start: number, end: number };
+
 const regexEscapeSetRegex = /[-/\\^$*+?.()|[\]{}]/g
 const singleQuoteStringEndRegex = /(?<!\\)'/
 const doubleQuoteStringEndRegex = /(?<!\\)"/
@@ -267,9 +269,7 @@ function handleKeyTokenFindResult (context: SplitExecutionContext, findResult: F
   }
 }
 
-export type SqlStatementResult = { stmt: string, start: number, end: number };
-
-export function split (sql: string, options?: SplitOptions): string[] {
+function doSplit (sql: string, options?: SplitOptions): SqlStatement[] {
   const context: SplitExecutionContext = {
     multipleStatements: options?.multipleStatements ?? false,
     retainComments: options?.retainComments ?? false,
@@ -300,39 +300,13 @@ export function split (sql: string, options?: SplitOptions): string[] {
     }
   } while (context.unread !== '')
   publishStatement(context)
-  return context.output.map(v => v.value)
+  return context.output
+}
+
+export function split(sql: string, options?: SplitOptions): string[] {
+  return doSplit(sql, options).map(v => v.value)
 }
 
 export function splitIncludeSourceMap (sql: string, options?: SplitOptions): SqlStatementResult[] {
-  const context: SplitExecutionContext = {
-    multipleStatements: options?.multipleStatements ?? false,
-    retainComments: options?.retainComments ?? false,
-    unread: sql,
-    unreadSourceFileIndex: 0,
-    currentDelimiter: SEMICOLON,
-    currentStatement: {
-      value: '',
-      supportMulti: true,
-      start: 0,
-      end: 0
-    },
-    output: []
-  }
-  let findResult: FindExpResult = {
-    expIndex: -1,
-    exp: null,
-    nextIndex: 0
-  }
-  let lastUnreadLength: number
-  do {
-    lastUnreadLength = context.unread.length
-    findResult = findKeyToken(context.unread, context.currentDelimiter)
-    handleKeyTokenFindResult(context, findResult)
-    // Prevent infinite loop by returning incorrect result
-    if (lastUnreadLength === context.unread.length) {
-      read(context, context.unread.length)
-    }
-  } while (context.unread !== '')
-  publishStatement(context)
-  return context.output.map(v => ({ stmt: v.value, start: v.start!, end: v.end! }))
+  return doSplit(sql, options).map(v => ({ stmt: v.value, start: v.start!, end: v.end! }))
 }
