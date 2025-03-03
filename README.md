@@ -117,7 +117,7 @@ const ENABLE_MULTI_STATEMENT = true
 })()
 ```
 
-Include orginal positions from where the statement was parsed
+Includes the start and end indexes of each parsed statement within the original SQL source string
 ```js
 const mysqlParser = require('@verycrazydog/mysql-parser')
 const splitResult = mysqlParser.splitIncludeSourceMap([
